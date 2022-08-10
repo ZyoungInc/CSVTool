@@ -1,0 +1,32 @@
+<head>
+    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+</head>
+<div id="tester" style="width:auto;height:50%;"></div>
+<div id="tester2" style="width:600px;height:250px;"></div>
+<script>
+    var data = [
+        {
+            x: [0, 1, 2],
+            y: [6, 10, 2],
+            error_y: {
+                type: 'data',
+                array: [1, 2, 3],
+                visible: true
+            },
+            error_x: {
+                type: 'percent',
+                value: 10
+            },
+            type: 'scatter' 
+        }
+    ];
+    var axisproperty = {yaxis: {fixedrange: true},};
+    var scrollsetting = {scrollZoom: true};
+    Plotly.newPlot('tester', data, axisproperty, scrollsetting);
+</script>
+
+<script>
+    Plotly.newPlot('tester2',[{
+  y: [2,1,2]
+}], {yaxis: {fixedrange: true},}, {scrollZoom: true});
+</script>

@@ -36,7 +36,7 @@
     <script src="./src/jquery.csv.js"></script>
     <script src="./src/helpers.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script><!-- plotly库函数-->
+    <script src="./src/plotly.js"></script><!-- plotly库函数-->
     <script>
       // enable syntax highlighting
       hljs.initHighlightingOnLoad();
@@ -114,6 +114,7 @@
                   visible: true
               },
               mode: 'markers',
+              marker: { size: 1.5 },
               type: 'scatter' 
         }], {yaxis: {fixedrange: true},}, {scrollZoom: true});
 

@@ -25,7 +25,7 @@
         <div id="file-info"></div>
         <hr />
         <h2>Plot</h2>
-        <div id="flot" style="width:600px;height:300px;margin:0 auto;"></div>
+        <div id="flot" style="width:auto;height:300px;margin:0 auto;"></div>
         <h2>Result</h2>
         <textarea id="result" style="height: 250px;"></textarea>
       </section>
@@ -36,6 +36,7 @@
     <script src="./src/jquery.csv.js"></script>
     <script src="./src/helpers.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script><!-- plotly库函数-->
     <script>
       // enable syntax highlighting
       hljs.initHighlightingOnLoad();
@@ -46,14 +47,14 @@
         }
       });
 
-      function plot(data) {//plot相关
-        $.plot($('#flot'), [data], {
-          series: {
-            lines: { show: true },
-            points: { show: true }
-          }
-        });
-      }
+      //function plot(data) {//plot相关
+        //$.plot($('#flot'), [data], {
+          //series: {
+            //lines: { show: true },
+            //points: { show: true }
+          //}
+        //});
+      //}
       
       function handleDialog(event) {
         var files = event.target.files;
@@ -72,10 +73,50 @@
         reader.readAsText(file);
         reader.onload = function(event){
           var csv = event.target.result;
-          var data = $.csv.toArrays(csv, {
-          onParseValue: $.csv.hooks.castToScalar//删除如果必要
-        });
-        plot(data);//删除如果必要
+          var data = $.csv.toArrays(csv, 
+          //{onParseValue: $.csv.hooks.castToScalar}//删除如果必要
+        );
+        //plot(data);//删除如果必要
+        //var results = data[0][0];
+        var xdata = new Array();
+        var ydata = new Array();
+        var xerror = new Array();
+        var yerror = new Array();
+        for (var i=1;i<data.length;i++){ //开始处理流程
+          xdata[i-1] = data[i][0];
+          ydata[i-1] = data[i][1];
+          if (i>1){
+            xerror[i-1] = data[i][0]-data[i-1][0];
+            yerror[i-1] = data[i][1]-data[i-1][1];
+          }else{
+            xerror[i-1] = data[i][0];
+            yerror[i-1] = data[i][1];
+          }
+        }
+
+        Plotly.newPlot('flot',[{
+          x: xdata,
+          y: ydata,
+          error_y: {
+                  type: 'data',
+                  symmetric: false,
+                  //array: [1, 0, 0],
+                  arrayminus: yerror,
+                  width: 0,
+                  visible: true
+              },
+              error_x: {
+                  type: 'data',
+                  symmetric: false,
+                  //array: [0.5, 0, 0],
+                  arrayminus: xerror,
+                  width: 0,
+                  visible: true
+              },
+              mode: 'markers',
+              type: 'scatter' 
+        }], {yaxis: {fixedrange: true},}, {scrollZoom: true});
+
         $('#result').empty();
         $('#result').html(JSON.stringify(data, null, 2));
         }

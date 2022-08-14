@@ -27,6 +27,25 @@
 
 <script>
     Plotly.newPlot('tester2',[{
-  y: [2,1,2]
-}], {yaxis: {fixedrange: true},}, {scrollZoom: true});
+        x: [0, 0.5, 1],
+        y: [2, 1, 2],
+        error_y: {
+                type: 'data',
+                symmetric: false,
+                //array: [1, 0, 0],
+                arrayminus: [1, -1, 1, -1],
+                width: 0,
+                visible: true
+            },
+            error_x: {
+                type: 'data',
+                symmetric: false,
+                //array: [0.5, 0, 0],
+                arrayminus: [1, 0.5, 0.5],
+                width: 0,
+                visible: true
+            },
+            mode: 'markers',
+            type: 'scatter' 
+    }], {yaxis: {fixedrange: true},}, {scrollZoom: true});
 </script>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+    <title>File Handling</title>
+    <link href="https://fonts.googleapis.com/css?family=Lato|Roboto|Source+Code+Pro" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/monokai.min.css">
+    <link rel="stylesheet" href="http://www.zyoung.tech/plotly/src/demo.css">
+  </head>
+
+  <body>
+
+    <div id="header">
+      <h1 id="title">CSV Tools</h1>
+      <div id="link"><a href="https://github.com/ZyoungInc/CSVTool">GitHub</a></div>
+    </div>
+    <div id="container">
+      <section id="content">
+        <h2>Description</h2>
+        <p>The demonstrates for kyle.</p>
+        <hr>
+        <h2>Input</h2>
+        <input type="file" id="files" name="files[]" multiple />
+        <hr />
+        <h2>FileInfo</h2>
+        <div id="file-info"></div>
+        <hr />
+        <h2>Plot</h2>
+        <div id="flot" style="width:auto;height:500px;margin:0 auto;"></div>
+        <h2>The result of the analysis</h2>
+        <div id="result" style="height: 250px;"></div>
+      </section>
+    </div>
+
+    <script src="http://code.jquery.com/jquery-3.3.1.slim.js" integrity="sha256-fNXJFIlca05BIO2Y5zh1xrShK3ME+/lYZ0j+ChxX2DA=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script><!-- plot相关-->
+    <script src="http://www.zyoung.tech/plotly/src/jquery.csv.js"></script>
+    <script src="http://www.zyoung.tech/plotly/src/helpers.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
+    <script src="http://www.zyoung.tech/plotly/src/plotly.js"></script><!-- plotly库函数-->
+    <script>
+      // enable syntax highlighting
+      hljs.initHighlightingOnLoad();
+
+      $(document).ready(function() {
+        if(isFileAPIAvailable()) {
+          $('#files').bind('change', handleDialog);
+        }
+      });
+
+      //function plot(data) {//plot相关
+        //$.plot($('#flot'), [data], {
+          //series: {
+            //lines: { show: true },
+            //points: { show: true }
+          //}
+        //});
+      //}
+      function to3bits(flt) {
+            if (parseFloat(flt) == flt) {
+                return Math.round(flt * 1000) / 1000; // 到3位小数
+            }
+            else
+                return 0;
+        }
+
+      function handleDialog(event) {
+        var files = event.target.files;
+        var file = files[0];
+
+        var fileInfo = `
+          <span style="font-weight:bold;">${escape(file.name)}</span><br>
+          - FileType: ${file.type || 'n/a'}<br>
+          - FileSize: ${file.size} bytes<br>
+          - LastModified: ${file.lastModifiedDate ? file.lastModifiedDate.toLocaleDateString() : 'n/a'}
+        `;
+        $('#file-info').empty();
+        $('#file-info').append(fileInfo);
+
+        var reader = new FileReader();
+        reader.readAsText(file);
+        reader.onload = function(event){
+          var csv = event.target.result;
+          var data = $.csv.toArrays(csv, 
+          //{onParseValue: $.csv.hooks.castToScalar}//删除如果必要
+        );
+        //plot(data);//删除如果必要
+        //var results = data[0][0];
+        var xdata = new Array();
+        var ydata = new Array();
+        var xerror = new Array();
+        var yerror = new Array();
+        const timescaleus = -1000000;
+        for (var i=1;i<data.length;i++){ //开始处理流程
+          xdata[i-1] = data[i][0];
+          ydata[i-1] = data[i][1];
+          if (i>1){
+            if(i == (data.length - 1)){//last point
+              xerror[i-1] = (0)*timescaleus;
+              yerror[i-1] = (data[i][1]-data[i-1][1])*timescaleus;
+            }else{//middle point
+              xerror[i-1] = (data[i][0]-data[i+1][0])*timescaleus;
+              yerror[i-1] = (data[i][1]-data[i-1][1])*timescaleus;
+            }
+          }else{//first point
+            xerror[i-1] = (data[i][0]-data[i+1][0])*10^6;
+            yerror[i-1] = (data[i][1])*1000000;
+          }
+        }
+//------------------------polt part----------------------------------
+        var plotdata = [
+          { name: data[0][1],
+            x: xdata,
+            y: ydata,
+            meta: xerror,
+            mode: 'markers+lines',
+            marker: { size: 1.5 },
+            line: {shape: 'hv'},
+            hovertemplate: "%{meta:.4f}us@%{x:.4f}s",
+            type: 'scatter'
+          }];
+
+        var axisproperty = 
+          { dragmode: 'pan',
+            selectdirection:"h",
+            "spikedistance": 200,
+            "hoverdistance": 200,
+            hovermode:'closest', 
+            yaxis: {fixedrange: true}, 
+            xaxis: {spikesnap:"cursor",
+                    rangeselector: "selectorOptions",
+                    rangeslider: {}, 
+                    showspikes: true, 
+                    spikemode: "across"}
+          };
+
+        var scrollsetting = 
+          { scrollZoom: true
+          };
+
+        Plotly.newPlot('flot',plotdata, axisproperty, scrollsetting);
+//-----------------------interact part------------------------
+        flot.on('plotly_selected', function(eventData) {
+          //console.log(eventData.points);
+          //eventData.points.forEach(function(pt) {
+            //console.log(-xerror[pt.pointIndex],pt.x,pt.y)
+          //});
+          var selectmin = Infinity;
+          var selectmax = -Infinity;
+          eventData.points.forEach(function(pt) {
+              if(pt.x > selectmax){
+                  selectmax = pt.x;
+              }
+              if(pt.x < selectmin){
+                  selectmin = pt.x;
+              }
+          });
+          //console.log(selectmin,selectmax);
+          var update ={
+                        shapes: [
+                        // 1st highlight during Feb 4 - Feb 6
+                        {
+                            type: 'rect',
+                            // x-reference is assigned to the x-values
+                            xref: 'x',
+                            // y-reference is assigned to the plot paper [0,1]
+                            yref: 'paper',
+                            x0: selectmin,
+                            y0: 0,
+                            x1: selectmax,
+                            y1: 1,
+                            fillcolor: '#000000',
+                            opacity: 0.2,
+                            line: {
+                                width: 0
+                            }
+                        }]
+          };
+          Plotly.relayout('flot',update);
+          $('#result').empty();
+          $('#result').append("[developing]Selected information will display here<br>");
+          $('#result').append(` - ΔT: ${to3bits((selectmin-selectmax)*timescaleus)}us<br>`);
+        });
+//-----------------------raw data-----------------------------
+        //$('#result').empty();
+        //$('#result').html(JSON.stringify(data, null, 2));
+        }
+      }
+    </script>
+  </body>
+</html>

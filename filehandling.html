@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8"/>
     <title>File Handling</title>
     <link href="https://fonts.googleapis.com/css?family=Lato|Roboto|Source+Code+Pro" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/monokai.min.css">
@@ -10,7 +11,7 @@
   <body>
 
     <div id="header">
-      <h1 id="title">CVS Tools</h1>
+      <h1 id="title">CSV Tools</h1>
       <div id="link"><a href="https://github.com/ZyoungInc/CSVTool">GitHub</a></div>
     </div>
     <div id="container">
@@ -25,9 +26,9 @@
         <div id="file-info"></div>
         <hr />
         <h2>Plot</h2>
-        <div id="flot" style="width:auto;height:300px;margin:0 auto;"></div>
-        <h2>Result</h2>
-        <textarea id="result" style="height: 250px;"></textarea>
+        <div id="flot" style="width:auto;height:500px;margin:0 auto;"></div>
+        <h2>The result of the analysis</h2>
+        <div id="result" style="height: 250px;"></div>
       </section>
     </div>
 
@@ -55,7 +56,14 @@
           //}
         //});
       //}
-      
+      function to3bits(flt) {
+            if (parseFloat(flt) == flt) {
+                return Math.round(flt * 1000) / 1000; // 到3位小数
+            }
+            else
+                return 0;
+        }
+
       function handleDialog(event) {
         var files = event.target.files;
         var file = files[0];
@@ -82,44 +90,100 @@
         var ydata = new Array();
         var xerror = new Array();
         var yerror = new Array();
+        const timescaleus = -1000000;
         for (var i=1;i<data.length;i++){ //开始处理流程
           xdata[i-1] = data[i][0];
           ydata[i-1] = data[i][1];
           if (i>1){
-            xerror[i-1] = data[i][0]-data[i-1][0];
-            yerror[i-1] = data[i][1]-data[i-1][1];
-          }else{
-            xerror[i-1] = data[i][0];
-            yerror[i-1] = data[i][1];
+            if(i == (data.length - 1)){//last point
+              xerror[i-1] = (0)*timescaleus;
+              yerror[i-1] = (data[i][1]-data[i-1][1])*timescaleus;
+            }else{//middle point
+              xerror[i-1] = (data[i][0]-data[i+1][0])*timescaleus;
+              yerror[i-1] = (data[i][1]-data[i-1][1])*timescaleus;
+            }
+          }else{//first point
+            xerror[i-1] = (data[i][0]-data[i+1][0])*10^6;
+            yerror[i-1] = (data[i][1])*1000000;
           }
         }
+//------------------------polt part----------------------------------
+        var plotdata = [
+          { name: data[0][1],
+            x: xdata,
+            y: ydata,
+            meta: xerror,
+            mode: 'markers+lines',
+            marker: { size: 1.5 },
+            line: {shape: 'hv'},
+            hovertemplate: "%{meta:.4f}us@%{x:.4f}s",
+            type: 'scatter'
+          }];
 
-        Plotly.newPlot('flot',[{
-          x: xdata,
-          y: ydata,
-          error_y: {
-                  type: 'data',
-                  symmetric: false,
-                  //array: [1, 0, 0],
-                  arrayminus: yerror,
-                  width: 0,
-                  visible: true
-              },
-              error_x: {
-                  type: 'data',
-                  symmetric: false,
-                  //array: [0.5, 0, 0],
-                  arrayminus: xerror,
-                  width: 0,
-                  visible: true
-              },
-              mode: 'markers',
-              marker: { size: 1.5 },
-              type: 'scatter' 
-        }], {yaxis: {fixedrange: true},}, {scrollZoom: true});
+        var axisproperty = 
+          { dragmode: 'pan',
+            selectdirection:"h",
+            "spikedistance": 200,
+            "hoverdistance": 200,
+            hovermode:'closest', 
+            yaxis: {fixedrange: true}, 
+            xaxis: {spikesnap:"cursor",
+                    rangeselector: "selectorOptions",
+                    rangeslider: {}, 
+                    showspikes: true, 
+                    spikemode: "across"}
+          };
 
-        $('#result').empty();
-        $('#result').html(JSON.stringify(data, null, 2));
+        var scrollsetting = 
+          { scrollZoom: true
+          };
+
+        Plotly.newPlot('flot',plotdata, axisproperty, scrollsetting);
+//-----------------------interact part------------------------
+        flot.on('plotly_selected', function(eventData) {
+          //console.log(eventData.points);
+          //eventData.points.forEach(function(pt) {
+            //console.log(-xerror[pt.pointIndex],pt.x,pt.y)
+          //});
+          var selectmin = Infinity;
+          var selectmax = -Infinity;
+          eventData.points.forEach(function(pt) {
+              if(pt.x > selectmax){
+                  selectmax = pt.x;
+              }
+              if(pt.x < selectmin){
+                  selectmin = pt.x;
+              }
+          });
+          //console.log(selectmin,selectmax);
+          var update ={
+                        shapes: [
+                        // 1st highlight during Feb 4 - Feb 6
+                        {
+                            type: 'rect',
+                            // x-reference is assigned to the x-values
+                            xref: 'x',
+                            // y-reference is assigned to the plot paper [0,1]
+                            yref: 'paper',
+                            x0: selectmin,
+                            y0: 0,
+                            x1: selectmax,
+                            y1: 1,
+                            fillcolor: '#000000',
+                            opacity: 0.2,
+                            line: {
+                                width: 0
+                            }
+                        }]
+          };
+          Plotly.relayout('flot',update);
+          $('#result').empty();
+          $('#result').append("[developing]Selected information will display here<br>");
+          $('#result').append(` - ΔT: ${to3bits((selectmin-selectmax)*timescaleus)}us<br>`);
+        });
+//-----------------------raw data-----------------------------
+        //$('#result').empty();
+        //$('#result').html(JSON.stringify(data, null, 2));
         }
       }
     </script>

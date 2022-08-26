@@ -6,30 +6,10 @@
 <script>
     var data = [
         {
-            x: [0, 1, 2],
-            y: [6, 10, 2],
+            x: [0, 0.5, 1, 1.5, 2],
+            y: [1, 0, 1, 0, 1],
+            /*
             error_y: {
-                type: 'data',
-                array: [1, 2, 3],
-                visible: true
-            },
-            error_x: {
-                type: 'percent',
-                value: 10
-            },
-            type: 'scatter' 
-        }
-    ];
-    var axisproperty = {yaxis: {fixedrange: true},};
-    var scrollsetting = {scrollZoom: true};
-    Plotly.newPlot('tester', data, axisproperty, scrollsetting);
-</script>
-
-<script>
-    Plotly.newPlot('tester2',[{
-        x: [0, 0.5, 1],
-        y: [2, 1, 2],
-        error_y: {
                 type: 'data',
                 symmetric: false,
                 //array: [1, 0, 0],
@@ -45,7 +25,63 @@
                 width: 0,
                 visible: true
             },
-            mode: 'markers',
+            */
+            line: {shape: 'vh'},
             type: 'scatter' 
-    }], {yaxis: {fixedrange: true},}, {scrollZoom: true});
+        }
+    ];
+    var axisproperty = {                        
+                        dragmode: 'select', 
+                        "spikedistance": 200,
+                        "hoverdistance": 200, 
+                        hovermode:'closest', 
+                        yaxis: {fixedrange: true}, 
+                        xaxis: {spikesnap:"cursor", 
+                        rangeselector: "selectorOptions", 
+                        rangeslider: {}, showspikes: true, 
+                        spikemode: "across"}};
+    var scrollsetting = {scrollZoom: true};
+    Plotly.newPlot('tester', data, axisproperty, scrollsetting);
+
+
+    tester.on('plotly_selected', function(eventData) {
+        var selectmin = Infinity;
+        var selectmax = -Infinity;
+        eventData.points.forEach(function(pt) {
+            if(pt.x > selectmax){
+                selectmax = pt.x;
+            }
+            if(pt.x < selectmin){
+                selectmin = pt.x;
+            }
+        });
+        console.log(selectmin,selectmax);
+        var update ={
+            shapes: [
+            // 1st highlight during Feb 4 - Feb 6
+            {
+                type: 'rect',
+                // x-reference is assigned to the x-values
+                xref: 'x',
+                // y-reference is assigned to the plot paper [0,1]
+                yref: 'paper',
+                x0: selectmin,
+                y0: 0,
+                x1: selectmax,
+                y1: 1,
+                fillcolor: '#000000',
+                opacity: 0.2,
+                line: {
+                    width: 0
+                }
+            }]
+        };
+        Plotly.relayout('tester',update);
+    });
+</script>
+
+<script>
+
+
+//Plotly.newPlot('tester2', data, layout);
 </script>
